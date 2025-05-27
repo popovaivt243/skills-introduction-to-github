@@ -1,0 +1,63 @@
+import requests
+from bs4 import BeautifulSoup
+
+
+def extract_surnames():
+    proxies = {
+        'http': 'http://proxy.omgtu:8080',
+        'https': 'http://proxy.omgtu:8080'
+    }
+
+    url = 'https://omgtu.ru/sveden/employees/'
+    try:
+        response = requests.get(url, timeout=10, proxies=proxies)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        cn = soup.find('div', class_="main__content")
+        all_surnames = set()  # Используем set для автоматического удаления дубликатов
+
+        for a in cn.find_all('a'):
+            full_name = a.get_text(strip=True)
+            if full_name:
+                # Извлекаем первую часть (фамилию) и убираем возможные кавычки/лишние символы
+                surname = full_name.split()[0].strip('"').strip("'").strip()
+                if surname:
+                    all_surnames.add(surname)
+        return sorted(all_surnames)  # Сортируем по алфавиту
+
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        return []
+
+
+def save_surnames(surnames, letter):
+    filtered = [s for s in surnames if s.startswith(letter)]
+    filename = f"surnames_{letter.lower()}.txt"
+
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write("\n".join(filtered))
+
+    print(f"Сохранено {len(filtered)} фамилий на букву '{letter}' в {filename}")
+
+
+def main():
+    surnames = extract_surnames()
+
+    if not surnames:
+        print("Не удалось извлечь фамилии")
+        return
+
+    # Сохраняем все фамилии
+    with open("all_surnames.txt", "w", encoding='utf-8') as f:
+        f.write("\n".join(surnames))
+
+    # Сохраняем фамилии на П
+    save_surnames(surnames, 'П')
+
+    print(f"Всего уникальных фамилий: {len(surnames)}")
+
+
+if __name__ == "__main__":
+    main()
+
